@@ -59,6 +59,7 @@ class DepositRequest(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     utr_number = models.CharField(max_length=50)
+    upi_id = models.CharField(max_length=50)
     created_at = models.DateTimeField(auto_now_add=True)
     payment_method = models.CharField(max_length=20) 
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
@@ -82,6 +83,7 @@ class WithdrawRequest(models.Model):
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     is_approved = models.BooleanField(default=False)
     is_rejected = models.BooleanField(default=False)
+    upi_id = models.CharField(max_length=50, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     approved_at = models.DateTimeField(null=True, blank=True)
 
@@ -98,7 +100,8 @@ class Transaction(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     note = models.CharField(max_length=255, null=True, blank=True)
-    related_deposit = models.ForeignKey('DepositRequest', null=True, blank=True, on_delete=models.SET_NULL)  # <-- Add this line
+    related_deposit = models.ForeignKey('DepositRequest', null=True, blank=True, on_delete=models.SET_NULL)
+    related_withdraw = models.ForeignKey('WithdrawRequest', null=True, blank=True, on_delete=models.SET_NULL)
 
     def __str__(self):
         return f"{self.user.username} - {self.transaction_type} - {self.amount} - {self.status}"
@@ -216,8 +219,10 @@ class DeclaredResult(models.Model):
 
 
 
+
 class AdminPhoto(models.Model):
     title = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, blank=True, null=True)
     image = models.ImageField(upload_to='admin_photos/')
     uploaded_at = models.DateTimeField(auto_now_add=True)
 

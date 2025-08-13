@@ -1,3 +1,5 @@
+
+
 """
 Django settings for backend project.
 
@@ -24,17 +26,18 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-ct%(g*h0_p1-rt2h+g4oc4y!$tipv_&8!^nht7t1rh07_25r3)'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 # ALLOWED_HOSTS = ['*'] 1
-ALLOWED_HOSTS = ['*', '192.168.132.143', 'localhost']
+ALLOWED_HOSTS = ['api.dreamjodi.in', 'dreamjodi.in', 'localhost', '127.0.0.1']
+
 
 # Application definition
 
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
-    'django.contrib.contenttypes',
+     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
@@ -55,11 +58,20 @@ MIDDLEWARE = [
 ]
 
 # CORS settings
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_ALL_ORIGINS = False
 
 CORS_ALLOWED_ORIGINS = [
-    "https://YOUR_REPLIT_URL",
-    "http://192.168.132.143:8081",
+    "https://dreamjodi.in",
+    "https://www.dreamjodi.in",
+    "https://api.dreamjodi.in",
+    
+    ]
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://dreamjodi.in",
+    "https://www.dreamjodi.in",
+    "https://api.dreamjodi.in",
+      # <-- yeh bhi add karo
 ]
 
 ROOT_URLCONF = 'backend.urls'
@@ -81,7 +93,6 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'backend.wsgi.application'
-
 
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 DATABASES = {
@@ -108,12 +119,9 @@ REST_FRAMEWORK = {
 }
 # JWT settings: 10 min access, 48 hours refresh
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
-    'REFRESH_TOKEN_LIFETIME': timedelta(hours=48),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=48),
+    'REFRESH_TOKEN_LIFETIME': timedelta(hours=72),
 }
-
-TIME_ZONE = 'Asia/Kolkata'
-USE_TZ = True
 
 
 
@@ -138,18 +146,20 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
 
+TIME_ZONE = 'Asia/Kolkata'
+USE_TZ = True
 LANGUAGE_CODE = 'en-us'
 
 TIME_ZONE = 'UTC'
 
 USE_I18N = True
 
-USE_TZ = True
+
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
-MEDIA_URL = '/media/'
+MEDIA_URL = 'https://api.dreamjodi.in/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 STATIC_URL = '/static/'
@@ -165,12 +175,4 @@ AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
     'stapp.authentication.UsernameOrMobileBackend',
 ]
-
-
-
-
-
-
-
-
-
+# Email settings

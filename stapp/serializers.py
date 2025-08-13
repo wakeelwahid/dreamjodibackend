@@ -136,7 +136,7 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = WithdrawRequest
-        fields = ['id', 'user', 'amount', 'is_approved', 'is_rejected', 'created_at', 'status']
+        fields = ['id', 'user', 'amount', 'upi_id', 'is_approved', 'is_rejected', 'created_at', 'status']
         read_only_fields = ['is_approved', 'is_rejected', 'created_at']
 
     def get_user(self, obj):
@@ -165,6 +165,7 @@ class DepositRequestSerializer(serializers.ModelSerializer):
             'user_info', 
             'amount', 
             'utr_number', 
+            'upi_id',
             'status', 
             'created_at'
         ]
@@ -195,9 +196,10 @@ class ReferralCommissionSerializer(serializers.ModelSerializer):
 from rest_framework import serializers
 from .models import AdminPhoto
 
+
 class AdminPhotoSerializer(serializers.ModelSerializer):
     class Meta:
         model = AdminPhoto
-        fields = ['id', 'title', 'image', 'uploaded_at']
+        fields = ['id', 'title', 'name', 'image', 'uploaded_at']
 
 

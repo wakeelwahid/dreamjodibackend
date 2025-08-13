@@ -1,3 +1,5 @@
+
+
 from django.shortcuts import render
 from django.contrib.auth import authenticate
 from django.http import JsonResponse
@@ -394,7 +396,7 @@ def declare_result(request):
             else:
                 # Default: 90x for number, 9x for andar/bahar, 5% commission
                 if bet.bet_type == 'number' and str(bet.number).zfill(2) == winning_number:
-                    payout = bet.amount * 90
+                    payout = bet.amount * 95
                     is_win = True
                 elif bet.bet_type == 'andar' and int(bet.number) == andar_digit:
                     payout = bet.amount * 9
@@ -546,18 +548,21 @@ def withdraw_request(request):
         wallet.save()
 
         # Create withdraw request
+        upi_id = request.data.get('upi_id', '').strip()
         withdraw_req = WithdrawRequest.objects.create(
             user=request.user,
-            amount=amount
+            amount=amount,
+            upi_id=upi_id
         )
 
-        # Create pending transaction for withdraw
+        # Create pending transaction for withdraw, always link related_withdraw
         Transaction.objects.create(
             user=request.user,
             transaction_type='withdraw',
             amount=amount,
             status='pending',
-            note='Withdraw request submitted'
+            note=f'Withdraw request - UPI: {upi_id}',
+            related_withdraw=withdraw_req
         )
 
         return Response({'message': 'Withdraw request submitted successfully'})
@@ -575,7 +580,13 @@ def transaction_history(request):
         ist = pytz.timezone('Asia/Kolkata')
         transactions = Transaction.objects.filter(user=request.user).order_by('-created_at')
         data = []
+        seen_withdraws = set()
         for txn in transactions:
+            # For withdraw, only show latest status for each withdraw request
+            if txn.transaction_type == 'withdraw' and txn.related_withdraw_id:
+                if txn.related_withdraw_id in seen_withdraws:
+                    continue
+                seen_withdraws.add(txn.related_withdraw_id)
             created_at_ist = txn.created_at.astimezone(ist)
             data.append({
                 'id': txn.id,
@@ -595,12 +606,12 @@ from django.utils import timezone
 
 GAME_TIMINGS = {
     
-    "FARIDABAD": {"open": "20:30", "close": "17:50"},
-    "JAIPUR KING": {"open": "22:30", "close": "17:50"},
-    "GHAZIABAD": {"open": "23:30", "close": "21:50"},
-    "GALI": {"open": "1:30", "close": "23:40"},
-    "DIAMOND KING": {"open": "1:30", "close": "23:50"},
-    "DISAWER": {"open": "07:00", "close": "02:30"},
+    "FARIDABAD": {"open": "10:00", "close": "17:30"},
+    "JAIPUR KING": {"open": "10:00", "close": "19:50"},
+    "GHAZIABAD": {"open": "10:00", "close": "21:20"},
+    "DIAMOND KING": {"open": "10:00", "close": "22:50"},
+    "GALI": {"open": "10:00", "close": "23:20"},
+    "DISAWER": {"open": "10:00", "close": "02:30"},
     
     
 }   
@@ -983,19 +994,27 @@ def admin_withdraw_action(request):
         withdraw_request = WithdrawRequest.objects.get(id=withdraw_id)
         wallet = Wallet.objects.get(user=withdraw_request.user)
 
+
         if action == 'approve':
             # Amount already deducted from winnings at request time, so just approve
             withdraw_request.is_approved = True
             withdraw_request.approved_at = timezone.now()
 
-            # Create transaction record for approved withdrawal
-            Transaction.objects.create(
+            # Update or create transaction record for approved withdrawal
+            txn, created = Transaction.objects.get_or_create(
                 user=withdraw_request.user,
                 transaction_type='withdraw',
                 amount=withdraw_request.amount,
-                status='approved',
-                note='Withdrawal approved'
+                related_withdraw=withdraw_request,
+                defaults={
+                    'status': 'approved',
+                    'note': f'Withdrawal approved - UPI: {withdraw_request.upi_id}'
+                }
             )
+            if not created:
+                txn.status = 'approved'
+                txn.note = f'Withdrawal approved - UPI: {withdraw_request.upi_id}'
+                txn.save()
 
         else:  # reject
             withdraw_request.is_rejected = True
@@ -1004,14 +1023,21 @@ def admin_withdraw_action(request):
             wallet.winnings += withdraw_request.amount
             wallet.save()
 
-            # Create transaction record for rejected withdrawal
-            Transaction.objects.create(
+            # Update or create transaction record for rejected withdrawal
+            txn, created = Transaction.objects.get_or_create(
                 user=withdraw_request.user,
                 transaction_type='withdraw',
                 amount=withdraw_request.amount,
-                status='rejected',
-                note='Withdrawal rejected'
+                related_withdraw=withdraw_request,
+                defaults={
+                    'status': 'rejected',
+                    'note': f'Withdrawal rejected - UPI: {withdraw_request.upi_id}'
+                }
             )
+            if not created:
+                txn.status = 'rejected'
+                txn.note = f'Withdrawal rejected - UPI: {withdraw_request.upi_id}'
+                txn.save()
 
         withdraw_request.save()
         return Response({'message': f'Withdrawal request {action}d successfully'})
@@ -1032,54 +1058,68 @@ def admin_transactions(request):
 
         transactions = []
 
-        # Get all Transaction records
-        transaction_records = Transaction.objects.all().order_by('-created_at')
-        for txn in transaction_records:
-            transactions.append({
-                'id': txn.id,
-                'user': {
-                    'username': txn.user.username,
-                    'mobile': txn.user.mobile
-                },
-                'transaction_type': txn.transaction_type,
-                'amount': str(txn.amount),
-                'status': txn.status,
-                'created_at': txn.created_at.isoformat(),
-                'note': txn.note or ''
-            })
-
-        # Get all DepositRequest records
+        # Only show one entry per DepositRequest (prefer Transaction if exists)
         deposit_requests = DepositRequest.objects.all().order_by('-created_at')
         for deposit in deposit_requests:
-            transactions.append({
-                'id': f'dep_{deposit.id}',
-                'user': {
-                    'username': deposit.user.username,
-                    'mobile': deposit.user.mobile
-                },
-                'transaction_type': 'deposit',
-                'amount': str(deposit.amount),
-                'status': deposit.status,
-                'created_at': deposit.created_at.isoformat(),
-                'note': f'UTR: {deposit.utr_number}'
-            })
+            txn = Transaction.objects.filter(related_deposit=deposit).order_by('-created_at').first()
+            if txn:
+                transactions.append({
+                    'id': txn.id,
+                    'user': {
+                        'username': txn.user.username,
+                        'mobile': txn.user.mobile
+                    },
+                    'transaction_type': txn.transaction_type,
+                    'amount': str(txn.amount),
+                    'status': txn.status,
+                    'created_at': txn.created_at.isoformat(),
+                    'note': txn.note or ''
+                })
+            else:
+                transactions.append({
+                    'id': f'dep_{deposit.id}',
+                    'user': {
+                        'username': deposit.user.username,
+                        'mobile': deposit.user.mobile
+                    },
+                    'transaction_type': 'deposit',
+                    'amount': str(deposit.amount),
+                    'status': deposit.status,
+                    'created_at': deposit.created_at.isoformat(),
+                    'note': f'UTR: {deposit.utr_number}'
+                })
 
-        # Get all WithdrawRequest records
+        # Only show one entry per WithdrawRequest (prefer Transaction if exists)
         withdraw_requests = WithdrawRequest.objects.all().order_by('-created_at')
         for withdraw in withdraw_requests:
-            status = 'approved' if withdraw.is_approved else 'rejected' if withdraw.is_rejected else 'pending'
-            transactions.append({
-                'id': f'with_{withdraw.id}',
-                'user': {
-                    'username': withdraw.user.username,
-                    'mobile': withdraw.user.mobile
-                },
-                'transaction_type': 'withdraw',
-                'amount': str(withdraw.amount),
-                'status': status,
-                'created_at': withdraw.created_at.isoformat(),
-                'note': ''
-            })
+            txn = Transaction.objects.filter(related_withdraw=withdraw).order_by('-created_at').first()
+            if txn:
+                transactions.append({
+                    'id': txn.id,
+                    'user': {
+                        'username': txn.user.username,
+                        'mobile': txn.user.mobile
+                    },
+                    'transaction_type': txn.transaction_type,
+                    'amount': str(txn.amount),
+                    'status': txn.status,
+                    'created_at': txn.created_at.isoformat(),
+                    'note': txn.note or ''
+                })
+            else:
+                status = 'approved' if withdraw.is_approved else 'rejected' if withdraw.is_rejected else 'pending'
+                transactions.append({
+                    'id': f'with_{withdraw.id}',
+                    'user': {
+                        'username': withdraw.user.username,
+                        'mobile': withdraw.user.mobile
+                    },
+                    'transaction_type': 'withdraw',
+                    'amount': str(withdraw.amount),
+                    'status': status,
+                    'created_at': withdraw.created_at.isoformat(),
+                    'note': ''
+                })
 
         # Sort all transactions by created_at in descending order
         transactions.sort(key=lambda x: x['created_at'], reverse=True)
@@ -1087,6 +1127,9 @@ def admin_transactions(request):
         return Response(transactions)
     except Exception as e:
         return Response({'error': str(e)}, status=500)
+
+
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated, IsActiveUser])
@@ -1096,6 +1139,7 @@ def user_deposit_request(request):
         amount = Decimal(str(data.get('amount', 0)))
         utr_number = data.get('utr_number', '').strip()
         payment_method = data.get('payment_method', 'UPI').strip()
+        upi_id = data.get('upi_id', '').strip()
 
         # Validate amount
         if amount < Decimal('100.00'):
@@ -1122,6 +1166,7 @@ def user_deposit_request(request):
             amount=amount,
             utr_number=utr_number,
             payment_method=payment_method,
+            upi_id=upi_id,
             status='pending'
         )
 
@@ -1131,7 +1176,7 @@ def user_deposit_request(request):
             transaction_type='deposit',
             amount=amount,
             status='pending',
-            note=f'Deposit request - UTR: {utr_number}',
+            note=f'Deposit request - UTR: {utr_number}, UPI: {upi_id}',
             related_deposit=deposit
         )
 
@@ -1231,7 +1276,7 @@ def admin_deposit_action(request):
                 status='pending'
             ).update(
                 status='approved',
-                note=f'Deposit approved - UTR: {deposit.utr_number}'
+                note=f'Deposit approved - UTR: {deposit.utr_number}, UPI: {deposit.upi_id}'
             )
 
             return Response({
@@ -1755,6 +1800,7 @@ def admin_user_deposits(request, user_id):
             "amount": float(dep.amount),
             "status": dep.status,
             "utr": dep.utr_number,
+            "upi": dep.upi_id,
             "created_at": dep.created_at,
         })
     return Response(data)
@@ -1777,6 +1823,7 @@ def admin_user_withdrawals(request, user_id):
                 "pending"
             ),
             "utr": getattr(w, "utr_number", ""),  # If field exists
+            "upi": getattr(w, "upi_id", ""),
             "created_at": w.created_at,
         })
     return Response(data)
@@ -2229,7 +2276,8 @@ def admin_upload_photo(request):
     title = request.data.get('title', '')
 
     # Create and save the photo
-    admin_photo = AdminPhoto.objects.create(title=title, image=file)
+    name = request.POST.get('name', '')
+    admin_photo = AdminPhoto.objects.create(title=title, name=name, image=file)
     serializer = AdminPhotoSerializer(admin_photo)
 
     return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -2266,9 +2314,22 @@ def admin_get_photos(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def user_get_photos(request):
-    """
-    User-facing API to get all photos. Only for authenticated (logged-in) users.
-    """
-    photos = AdminPhoto.objects.all()
+    amount = request.GET.get('amount')
+    if amount:
+        photos = AdminPhoto.objects.filter(title__icontains=str(amount))
+    else:
+        photos = AdminPhoto.objects.all()
     serializer = AdminPhotoSerializer(photos, many=True)
     return Response(serializer.data)
+
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsActiveUser])
+def my_last_deposit(request):
+    try:
+        last_deposit = DepositRequest.objects.filter(user=request.user, status='approved').order_by('-created_at').first()
+        upi_id = last_deposit.upi_id if last_deposit else ""
+        return Response({"upi_id": upi_id})
+    except Exception as e:
+        return Response({"upi_id": "", "error": str(e)}, status=500)

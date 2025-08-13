@@ -62,6 +62,7 @@ urlpatterns = [
     path('admin/upload-photo/', admin_upload_photo, name='admin_upload_photo'),
     path('admin/delete-photo/<int:photo_id>/', admin_delete_photo, name='admin_delete_photo'),
     path('admin/get-photos/', admin_get_photos, name='admin_get_photos'),
+    path('user-upimatch/', my_last_deposit, name='my_last_deposit'),
     path('get-photos/', user_get_photos, name='user_get_photos'),
    
 ]
