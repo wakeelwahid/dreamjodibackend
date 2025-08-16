@@ -64,5 +64,8 @@ urlpatterns = [
     path('admin/get-photos/', admin_get_photos, name='admin_get_photos'),
     path('user-upimatch/', my_last_deposit, name='my_last_deposit'),
     path('get-photos/', user_get_photos, name='user_get_photos'),
+    
+    # Game schedules API for frontend
+    path('game-schedules/', game_schedules, name='game_schedules'),
    
 ]

@@ -131,7 +131,7 @@ class BetAdminSerializer(serializers.ModelSerializer):
 # Withdraw Request Serializer
 class WithdrawRequestSerializer(serializers.ModelSerializer):
     user = serializers.SerializerMethodField()
-    created_at = serializers.DateTimeField(format="%d-%m-%Y %H:%M:%S")
+    created_at = serializers.SerializerMethodField()
     status = serializers.SerializerMethodField()
 
     class Meta:
@@ -146,6 +146,11 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
             "mobile": obj.user.mobile
         }
 
+    def get_created_at(self, obj):
+        import pytz
+        ist = pytz.timezone('Asia/Kolkata')
+        return obj.created_at.astimezone(ist).isoformat()
+
     def get_status(self, obj):
         if obj.is_approved:
             return "approved"
@@ -156,7 +161,7 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
 # Deposit Request Serializer
 class DepositRequestSerializer(serializers.ModelSerializer):
     user_info = serializers.SerializerMethodField()
-    created_at = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S")
+    created_at = serializers.SerializerMethodField()
 
     class Meta:
         model = DepositRequest
@@ -177,6 +182,11 @@ class DepositRequestSerializer(serializers.ModelSerializer):
             'username': obj.user.username,
             'mobile': obj.user.mobile
         }
+
+    def get_created_at(self, obj):
+        import pytz
+        ist = pytz.timezone('Asia/Kolkata')
+        return obj.created_at.astimezone(ist).isoformat()
 
 class DepositActionSerializer(serializers.Serializer):
     deposit_id = serializers.IntegerField(required=True)

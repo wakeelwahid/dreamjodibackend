@@ -1,3 +1,93 @@
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+GAME_SCHEDULES = [
+    {
+        "key": "faridabad",
+        "name": "Faridabad",
+        "openTime": "10:00",
+        "closeTime": "17:30",
+        "resultTime": "18:10",
+        "wining": "1/95",
+        "color": "#50C878",
+        "btnColor": "#50C878",
+        "bgColor": "rgba(25, 25, 25, 0.9)",
+        "borderColor": "#50C878",
+        "path": "/faridabad",
+    },
+    {
+        "key": "jaipur",
+        "name": "Jaipur King",
+        "openTime": "10:00",
+        "closeTime": "19:50",
+        "resultTime": "20:00",
+        "wining": "1/100",
+        "color": "#FFD700",
+        "btnColor": "#FFD700",
+        "bgColor": "rgba(25, 25, 25, 0.9)",
+        "borderColor": "#FFD700",
+        "path": "/jaipur",
+    },
+    {
+        "key": "ghaziabad",
+        "name": "Ghaziabad",
+        "openTime": "10:00",
+        "closeTime": "21:00",
+        "resultTime": "22:10",
+        "wining": "1/95",
+        "color": "#4169E1",
+        "btnColor": "#4169E1",
+        "bgColor": "rgba(25, 25, 25, 0.9)",
+        "borderColor": "#4169E1",
+        "path": "/ghaziabad",
+    },
+    {
+        "key": "diamond",
+        "name": "Diamond King",
+        "openTime": "10:00",
+        "closeTime": "22:50",
+        "resultTime": "23:00",
+        "wining": "1/100",
+        "color": "#E91E63",
+        "btnColor": "#E91E63",
+        "bgColor": "rgba(25, 25, 25, 0.9)",
+        "borderColor": "#E91E63",
+        "path": "/diamond",
+    },
+    {
+        "key": "gali",
+        "name": "Gali",
+        "openTime": "10:00",
+        "closeTime": "23:00",
+        "resultTime": "12:00",
+        "wining": "1/95",
+        "color": "#9370DB",
+        "btnColor": "#9370DB",
+        "bgColor": "rgba(25, 25, 25, 0.9)",
+        "borderColor": "#9370DB",
+        "path": "/gali",
+    },
+    {
+        "key": "disawer",
+        "name": "Disawer",
+        "openTime": "10:00",
+        "closeTime": "02:30",
+        "resultTime": "05:00",
+        "wining": "1/95",
+        "color": "#FF6B6B",
+        "btnColor": "#FF6B6B",
+        "bgColor": "rgba(25, 25, 25, 0.9)",
+        "borderColor": "#FF6B6B",
+        "path": "/disawer",
+    },
+]
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def game_schedules(request):
+    """
+    Public endpoint: Returns the full game schedule (open, close, result, odds, color, etc.) in IST for frontend sync.
+    """
+    return Response({"schedules": GAME_SCHEDULES, "timezone": "Asia/Kolkata"})
 
 
 from django.shortcuts import render
@@ -1060,6 +1150,8 @@ def admin_transactions(request):
 
         # Only show one entry per DepositRequest (prefer Transaction if exists)
         deposit_requests = DepositRequest.objects.all().order_by('-created_at')
+        import pytz
+        ist = pytz.timezone('Asia/Kolkata')
         for deposit in deposit_requests:
             txn = Transaction.objects.filter(related_deposit=deposit).order_by('-created_at').first()
             if txn:
@@ -1072,7 +1164,7 @@ def admin_transactions(request):
                     'transaction_type': txn.transaction_type,
                     'amount': str(txn.amount),
                     'status': txn.status,
-                    'created_at': txn.created_at.isoformat(),
+                    'created_at': txn.created_at.astimezone(ist).isoformat(),
                     'note': txn.note or ''
                 })
             else:
@@ -1085,7 +1177,7 @@ def admin_transactions(request):
                     'transaction_type': 'deposit',
                     'amount': str(deposit.amount),
                     'status': deposit.status,
-                    'created_at': deposit.created_at.isoformat(),
+                    'created_at': deposit.created_at.astimezone(ist).isoformat(),
                     'note': f'UTR: {deposit.utr_number}'
                 })
 
