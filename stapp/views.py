@@ -7,7 +7,7 @@ GAME_SCHEDULES = [
         "openTime": "10:00",
         "closeTime": "17:30",
         "resultTime": "18:10",
-        "wining": "1/95",
+        "wining": "1/90",
         "color": "#50C878",
         "btnColor": "#50C878",
         "bgColor": "rgba(25, 25, 25, 0.9)",
@@ -33,7 +33,7 @@ GAME_SCHEDULES = [
         "openTime": "10:00",
         "closeTime": "21:00",
         "resultTime": "22:10",
-        "wining": "1/95",
+        "wining": "1/90",
         "color": "#4169E1",
         "btnColor": "#4169E1",
         "bgColor": "rgba(25, 25, 25, 0.9)",
@@ -59,7 +59,7 @@ GAME_SCHEDULES = [
         "openTime": "10:00",
         "closeTime": "23:00",
         "resultTime": "12:00",
-        "wining": "1/95",
+        "wining": "1/90",
         "color": "#9370DB",
         "btnColor": "#9370DB",
         "bgColor": "rgba(25, 25, 25, 0.9)",
@@ -72,7 +72,7 @@ GAME_SCHEDULES = [
         "openTime": "10:00",
         "closeTime": "02:30",
         "resultTime": "05:00",
-        "wining": "1/95",
+        "wining": "1/90",
         "color": "#FF6B6B",
         "btnColor": "#FF6B6B",
         "bgColor": "rgba(25, 25, 25, 0.9)",
@@ -337,23 +337,23 @@ def place_bet(request):
         if game_name:
             game_name = game_name.upper()
 
-        print(f"[DEBUG] Incoming bet: game={game_name}, number={number}, amount={amount}, bet_type={bet_type}, user={request.user}")
+       
 
         timing_manager = GameTimingManager()
         is_locked = timing_manager.is_game_locked(game_name)
         next_open = timing_manager.get_next_open_time(game_name)
-        print(f"[DEBUG] is_game_locked={is_locked}, next_open_time={next_open}")
+        
 
         open_dt, close_dt, _ = get_game_time_window(game_name)  # ✅ Fix
         now = timezone.localtime()
-        print(f"[DEBUG] {game_name} session: {open_dt} to {close_dt}, NOW: {now}")
+        
 
         if open_dt is None or close_dt is None:
-            print(f"[DEBUG] Invalid game name or timings not set for {game_name}")
+           
             return Response({'error': 'Invalid game name or timings not set.'}, status=400)
 
         if is_locked:
-            print(f"[DEBUG] Bet rejected: {game_name} is locked.")
+            
             return Response({
                 'error': f'{game_name.title()} is currently locked. Please wait for next opening time.',
                 'next_open_time': next_open
@@ -363,14 +363,14 @@ def place_bet(request):
         try:
             wallet = Wallet.objects.get(user=request.user)
         except Wallet.DoesNotExist:
-            print("[DEBUG] Wallet not found for user.")
+            
             return Response({'error': 'Wallet not found'}, status=404)
 
         total_balance = wallet.balance + wallet.bonus + wallet.winnings
-        print(f"[DEBUG] User balance: {wallet.balance}, bonus: {wallet.bonus}, winnings: {wallet.winnings}, total: {total_balance}")
+       
 
         if total_balance < amount:
-            print(f"[DEBUG] Bet rejected: Insufficient balance ({total_balance} < {amount})")
+            
             return Response({'error': 'Insufficient balance'}, status=400)
 
         # Deduct amount from wallet (prefer balance, then winnings, then bonus)
@@ -395,7 +395,7 @@ def place_bet(request):
                 wallet.bonus -= left
                 left = Decimal('0.00')
             else:
-                print(f"[DEBUG] Bet rejected: Insufficient balance after all deductions.")
+               
                 return Response({'error': 'Insufficient balance.'}, status=400)
 
         wallet.save()
@@ -410,9 +410,9 @@ def place_bet(request):
             session_start=open_dt,
             session_end=close_dt,
         )
-        print(f"[DEBUG] Bet created: id={bet.id}")
+       
 
-        print(f"[DEBUG] Bet placed successfully for user {request.user}")
+        
         return Response({
             'message': 'Bet placed successfully',
             'bet_id': bet.id,
@@ -421,7 +421,7 @@ def place_bet(request):
 
     except Exception as e:
         import traceback
-        print("[DEBUG] Exception in place_bet:", traceback.format_exc())
+        
         return Response({'error': str(e)}, status=500)
     
 # ...existing code...
@@ -486,7 +486,7 @@ def declare_result(request):
             else:
                 # Default: 90x for number, 9x for andar/bahar, 5% commission
                 if bet.bet_type == 'number' and str(bet.number).zfill(2) == winning_number:
-                    payout = bet.amount * 95
+                    payout = bet.amount * 90
                     is_win = True
                 elif bet.bet_type == 'andar' and int(bet.number) == andar_digit:
                     payout = bet.amount * 9
@@ -530,7 +530,7 @@ def declare_result(request):
 
     except Exception as e:
         import traceback
-        print(traceback.format_exc())
+        
         return Response({'error': str(e)}, status=500)
 
 
@@ -698,9 +698,9 @@ GAME_TIMINGS = {
     
     "FARIDABAD": {"open": "10:00", "close": "17:30"},
     "JAIPUR KING": {"open": "10:00", "close": "19:50"},
-    "GHAZIABAD": {"open": "10:00", "close": "21:20"},
+    "GHAZIABAD": {"open": "10:00", "close": "21:00"},
     "DIAMOND KING": {"open": "10:00", "close": "22:50"},
-    "GALI": {"open": "10:00", "close": "23:20"},
+    "GALI": {"open": "10:00", "close": "23:00"},
     "DISAWER": {"open": "10:00", "close": "02:30"},
     
     
@@ -1584,7 +1584,7 @@ def undo_result(request):
     
     except Exception as e:
         import traceback
-        print(traceback.format_exc())
+       
         return Response({'error': str(e)}, status=500)
 
 

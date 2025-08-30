@@ -65,16 +65,16 @@ CORS_ALLOWED_ORIGINS = [
     "https://dreamjodi.in",
     "https://www.dreamjodi.in",
     "https://api.dreamjodi.in",
-    "http://localhost:5000",
-    "http://127.0.0.1:5000",
+    # "http://localhost:5000",
+    # "http://127.0.0.1:5000",
 ]
 
 CSRF_TRUSTED_ORIGINS = [
     "https://dreamjodi.in",
     "https://www.dreamjodi.in",
     "https://api.dreamjodi.in",
-    "http://localhost:5000",
-    "http://127.0.0.1:5000",
+    # "http://localhost:5000",
+    # "http://127.0.0.1:5000",
 ]
 
 ROOT_URLCONF = 'backend.urls'
@@ -122,8 +122,8 @@ REST_FRAMEWORK = {
 }
 # JWT settings: 10 min access, 48 hours refresh
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(hours=48),
-    'REFRESH_TOKEN_LIFETIME': timedelta(hours=72),
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=168),
+    'REFRESH_TOKEN_LIFETIME': timedelta(hours=168),
 }
 
 
