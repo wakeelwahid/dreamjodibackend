@@ -44,8 +44,8 @@ GAME_SCHEDULES = [
         "key": "diamond",
         "name": "Diamond King",
         "openTime": "10:00",
-        "closeTime": "22:50",
-        "resultTime": "23:00",
+        "closeTime": "22:30",
+        "resultTime": "22:40",
         "wining": "1/100",
         "color": "#E91E63",
         "btnColor": "#E91E63",
@@ -625,13 +625,20 @@ def withdraw_request(request):
         wallet = Wallet.objects.get(user=request.user)
         
         if amount < 100:
-            return Response({'error': 'Minimum withdrawal amount is ₹100.'}, status=400)
+            return Response({'error': 'कम से कम ₹100 निकासी कर सकते हैं।'}, status=400)
         if amount > 30000:
-            return Response({'error': 'Maximum withdrawal amount is ₹30,000.'}, status=400)
+            return Response({'error': 'एक बार में अधिकतम ₹30,000 निकासी कर सकते हैं।'}, status=400)
 
-        # Only winnings can be withdrawn
-        if wallet.winnings < amount:
-            return Response({'error': 'Insufficient winnings balance.'}, status=400)
+        # Only winnings can be withdrawn, but after withdrawal, minimum 100 coins must remain in wallet
+        total_coins = wallet.balance + wallet.bonus + wallet.winnings
+        max_withdrawable = min(wallet.winnings, total_coins - 100)
+        if max_withdrawable < 0:
+            max_withdrawable = 0
+        if amount > max_withdrawable:
+            if wallet.winnings < amount:
+                return Response({'error': f'आपकी जीत में इतने coins नहीं हैं। आप अधिकतम {max_withdrawable} coins निकाल सकते हैं।'}, status=400)
+            else:
+                return Response({'error': f'निकासी के बाद वॉलेट में कम से कम 100 coins रहना जरूरी है। आप अधिकतम {max_withdrawable} coins निकाल सकते हैं।'}, status=400)
 
         # Deduct from winnings immediately
         wallet.winnings -= amount
@@ -655,7 +662,7 @@ def withdraw_request(request):
             related_withdraw=withdraw_req
         )
 
-        return Response({'message': 'Withdraw request submitted successfully'})
+        return Response({'message': 'निकासी अनुरोध सफल रहा। जल्दी ही approve हो जाएगा।'})
     except Exception as e:
         return Response({'error': str(e)}, status=500)
 
@@ -699,7 +706,7 @@ GAME_TIMINGS = {
     "FARIDABAD": {"open": "10:00", "close": "17:30"},
     "JAIPUR KING": {"open": "10:00", "close": "19:50"},
     "GHAZIABAD": {"open": "10:00", "close": "21:00"},
-    "DIAMOND KING": {"open": "10:00", "close": "22:50"},
+    "DIAMOND KING": {"open": "10:00", "close": "22:30"},
     "GALI": {"open": "10:00", "close": "23:00"},
     "DISAWER": {"open": "10:00", "close": "02:30"},
     

@@ -65,16 +65,16 @@ CORS_ALLOWED_ORIGINS = [
     "https://dreamjodi.in",
     "https://www.dreamjodi.in",
     "https://api.dreamjodi.in",
-    # "http://localhost:5000",
-    # "http://127.0.0.1:5000",
+    "http://localhost:5000",
+    "http://127.0.0.1:5000",
 ]
 
 CSRF_TRUSTED_ORIGINS = [
     "https://dreamjodi.in",
     "https://www.dreamjodi.in",
     "https://api.dreamjodi.in",
-    # "http://localhost:5000",
-    # "http://127.0.0.1:5000",
+    "http://localhost:5000",
+    "http://127.0.0.1:5000",
 ]
 
 ROOT_URLCONF = 'backend.urls'
